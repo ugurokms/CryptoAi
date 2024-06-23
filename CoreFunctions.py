@@ -30,15 +30,37 @@ def executeSell(client, market, qtySell):
     order = client.order_market_sell(symbol=market, quantity=qtySell)
 
 def create_dataframe(klines):
-    columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
-    df = pd.DataFrame(klines, columns=columns)
+    columns = {
+        'timestamp': True,
+        'open': True,
+        'high': True,
+        'low': True,
+        'close': True,
+        'volume': True,
+        'close_time': True,
+        'quote_asset_volume': True,
+        'number_of_trades': True,
+        'taker_buy_base_asset_volume': True,
+        'taker_buy_quote_asset_volume': True,
+        'ignore': False
+    }
     
-    # Convert timestamps from milliseconds to seconds
-    df['timestamp'] = df['timestamp'].astype(float) / 1000
-    df['close_time'] = df['close_time'].astype(float) / 1000
+    # Only include columns that are set to True
+    selected_columns = [col for col, use in columns.items() if use]
+    df = pd.DataFrame(klines, columns=columns.keys())
+    df = df[selected_columns]
 
-    # Convert data types
-    df[['open', 'high', 'low', 'close', 'volume']] = df[['open', 'high', 'low', 'close', 'volume']].astype(float)
+    # Convert timestamps from milliseconds to seconds if 'timestamp' or 'close_time' are selected
+    if 'timestamp' in df.columns:
+        df['timestamp'] = df['timestamp'].astype(float) / 1000
+    if 'close_time' in df.columns:
+        df['close_time'] = df['close_time'].astype(float) / 1000
+    
+    # Convert other data types
+    numeric_columns = ['open', 'high', 'low', 'close', 'volume']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = df[col].astype(float)
     
     return df
 
