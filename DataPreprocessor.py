@@ -24,42 +24,59 @@ api_key = '0'
 api_secret = '0'
 client = Client(api_key, api_secret)
 
-interval = Client.KLINE_INTERVAL_1DAY
-start_date = "01 Jan, 2020"
-end_date = "10 Jul, 2023"
+interval_list = [
+    ('1m', Client.KLINE_INTERVAL_1MINUTE),
+    ('3m', Client.KLINE_INTERVAL_3MINUTE),
+    ('5m', Client.KLINE_INTERVAL_5MINUTE),
+    ('15m', Client.KLINE_INTERVAL_15MINUTE),
+    ('30m', Client.KLINE_INTERVAL_30MINUTE),
+    ('1h', Client.KLINE_INTERVAL_1HOUR),
+    ('2h', Client.KLINE_INTERVAL_2HOUR),
+    ('4h', Client.KLINE_INTERVAL_4HOUR),
+    ('6h', Client.KLINE_INTERVAL_6HOUR),
+    ('8h', Client.KLINE_INTERVAL_8HOUR),
+    ('12h', Client.KLINE_INTERVAL_12HOUR),
+    ('1d', Client.KLINE_INTERVAL_1DAY),
+    ('3d', Client.KLINE_INTERVAL_3DAY),
+    ('1w', Client.KLINE_INTERVAL_1WEEK),
+    ('1M', Client.KLINE_INTERVAL_1MONTH)
+]
 
-interval_mapping = {item[0]: item[1] for item in cf.interval_list}
+interval_mapping = {item[0]: item[1] for item in interval_list}
 
-file_name = f"btc_usdt_{interval_mapping[interval]}.csv"
-file_path = os.path.join("Data", file_name)
-target_file_path = file_path.replace(".csv", "_targets.csv")
+def get_data(interval, start_date, end_date):
+    file_name = f"btc_usdt_{interval_mapping[interval]}.csv"
+    file_path = os.path.join("Data", file_name)
+    target_file_path = file_path.replace(".csv", "_targets.csv")
 
-if os.path.exists(file_path) and os.path.exists(target_file_path):
-    x = pd.read_csv(file_path)
-    y = pd.read_csv(target_file_path)['target'].tolist()
+    if os.path.exists(file_path) and os.path.exists(target_file_path):
+        x = pd.read_csv(file_path)
+        y = pd.read_csv(target_file_path)['target'].tolist()
+    else:
+        # Fetch historical data
+        candles = client.get_historical_klines("BTCUSDT", interval_mapping[interval], start_date, end_date)
 
-else:
-    # Fetch historical data
-    candles = client.get_historical_klines("BTCUSDT", interval, start_date, end_date)
-    
-    # Convert the raw data from the exchange into a friendlier form with some basic feature creation
-    x = cf.FeatureCreation(candles)
+        # Convert the raw data from the exchange into a friendlier form with some basic feature creation
+        x = cf.FeatureCreation(candles)
 
-    # Create our targets
-    y = cf.CreateTargets(candles, 1)
+        # Create our targets
+        y = cf.CreateTargets(candles, 1)
 
-    #remove the top elements of the features and targets - this is for certain features that arent compatible with the top most
-    #for example SMA27 would have 27 entries that would be incompatible/incomplete and would need to be discarded
-    y = y[94:]
-    x = x[94:len(candles)-1]
+        #remove the top elements of the features and targets - this is for certain features that arent compatible with the top most
+        #for example SMA27 would have 27 entries that would be incompatible/incomplete and would need to be discarded        y = y[94:]
+        x = x[94:len(candles)-1]
 
-    # Save the feature dataframe and target list to CSV
-    x.to_csv(file_path, index=False)
-    pd.DataFrame(y, columns=['target']).to_csv(target_file_path, index=False)
+        # Save the feature dataframe and target list to CSV
+        x.to_csv(file_path, index=False)
+        pd.DataFrame(y, columns=['target']).to_csv(target_file_path, index=False)
+
+    return x, np.array(y)
 
 
-print(x.head())
-print(y[:10])
+
+
+
+
 
 #produce sets, avoiding overlaps!
 #data is seporated temporily rather than randomly

@@ -13,23 +13,6 @@ import pandas as pd
 import numpy as np
 import ta
 
-interval_list = [
-    (Client.KLINE_INTERVAL_1MINUTE, '1min'),
-    (Client.KLINE_INTERVAL_3MINUTE, '3min'),
-    (Client.KLINE_INTERVAL_5MINUTE, '5min'),
-    (Client.KLINE_INTERVAL_15MINUTE, '15min'),
-    (Client.KLINE_INTERVAL_30MINUTE, '30min'),
-    (Client.KLINE_INTERVAL_1HOUR, '1hour'),
-    (Client.KLINE_INTERVAL_2HOUR, '2hour'),
-    (Client.KLINE_INTERVAL_4HOUR, '4hour'),
-    (Client.KLINE_INTERVAL_6HOUR, '6hour'),
-    (Client.KLINE_INTERVAL_8HOUR, '8hour'),
-    (Client.KLINE_INTERVAL_12HOUR, '12hour'),
-    (Client.KLINE_INTERVAL_1DAY, '1day'),
-    (Client.KLINE_INTERVAL_3DAY, '3day'),
-    (Client.KLINE_INTERVAL_1WEEK, '1week'),
-    (Client.KLINE_INTERVAL_1MONTH, '1month')
-]
 
 #Get the balance of a specified coin
 def getCoinBalance(client, currency):
@@ -46,80 +29,41 @@ def executeSell(client, market, qtySell):
 
     order = client.order_market_sell(symbol=market, quantity=qtySell)
 
-#format the data correctly for later use
-def CreateOpenHighLowCloseVolumeData(indata):
+def create_dataframe(klines):
+    columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
+    df = pd.DataFrame(klines, columns=columns)
     
-    out = pd.DataFrame()
-    
-    d = []
-    o = []
-    h = []
-    l = []
-    c = []
-    v = []
-    for i in indata:
-        #print(i)
-        d.append(float(i[0]))
-        o.append(float(i[1]))
-        h.append(float(i[2]))
-        c.append(float(i[3]))
-        l.append(float(i[4]))
-        v.append(float(i[5]))
+    # Convert timestamps from milliseconds to seconds
+    df['timestamp'] = df['timestamp'].astype(float) / 1000
+    df['close_time'] = df['close_time'].astype(float) / 1000
 
-    out['date'] = d
-    out['open'] = o
-    out['high'] = h
-    out['low'] = l
-    out['close'] = c
-    out['volume'] = v
+    # Convert data types
+    df[['open', 'high', 'low', 'close', 'volume']] = df[['open', 'high', 'low', 'close', 'volume']].astype(float)
     
-    #print(out)
-    
-    return out
+    return df
 
-#This is the main function for feature creation and manipulation, modify this by adding your own functions and feature creation
-#prehaps try using technical analysis libraries for RSI or
-#Sentiment data from bitfinex or Fear and greed data
-def FeatureCreation(indata):
-    convertedData = CreateOpenHighLowCloseVolumeData(indata)
-    FeatureData = pd.DataFrame({
-        'date': convertedData['date'],
-        'open': convertedData['open'],
-        'high': convertedData['high'],
-        'low': convertedData['low'],
-        'close': convertedData['close'],
-        'volume': convertedData['volume']
-    })
+def FeatureCreation(klines):
+    # Convert raw data to a DataFrame
+    convertedData = create_dataframe(klines)
     
-    # Existing features
-    #candleRatios(FeatureData)
-    #StepData(FeatureData['close'], FeatureData)
-    #GetChangeData(FeatureData)
+    # Add technical indicators directly to the convertedData DataFrame
+    convertedData['rsi'] = ta.momentum.rsi(convertedData['close'], window=14)
+    convertedData['macd'] = ta.trend.macd(convertedData['close'])
+    convertedData['macd_signal'] = ta.trend.macd_signal(convertedData['close'])
+    convertedData['macd_diff'] = ta.trend.macd_diff(convertedData['close'])
+    convertedData['bb_high'] = ta.volatility.bollinger_hband(convertedData['close'])
+    convertedData['bb_low'] = ta.volatility.bollinger_lband(convertedData['close'])
+    convertedData['bb_mid'] = ta.volatility.bollinger_mavg(convertedData['close'])
+    convertedData['bb_high_indicator'] = ta.volatility.bollinger_hband_indicator(convertedData['close'])
+    convertedData['bb_low_indicator'] = ta.volatility.bollinger_lband_indicator(convertedData['close'])
     
-    # Technical indicators
-    technical_indicators = pd.DataFrame({
-        'rsi': ta.momentum.rsi(FeatureData['close'], window=14),
-        'macd': ta.trend.macd(FeatureData['close']),
-        'macd_signal': ta.trend.macd_signal(FeatureData['close']),
-        'macd_diff': ta.trend.macd_diff(FeatureData['close']),
-        'bb_high': ta.volatility.bollinger_hband(FeatureData['close']),
-        'bb_low': ta.volatility.bollinger_lband(FeatureData['close']),
-        'bb_mid': ta.volatility.bollinger_mavg(FeatureData['close']),
-        'bb_high_indicator': ta.volatility.bollinger_hband_indicator(FeatureData['close']),
-        'bb_low_indicator': ta.volatility.bollinger_lband_indicator(FeatureData['close'])
-    })
-    
-    # Combine all features into a single DataFrame
-    FeatureData = pd.concat([FeatureData, technical_indicators], axis=1)
+    return convertedData
 
-    return FeatureData
-    
+
 #Create targets for our machine learning model. This is done by predicting if the closing price of the next candle will 
 #be higher or lower than the current one.
 def CreateTargets(data, offset):
-    
     y = []
-    
     
     for i in range(0, len(data)-offset):
         current = float(data[i][3])
