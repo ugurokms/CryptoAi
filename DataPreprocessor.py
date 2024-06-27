@@ -22,6 +22,7 @@ from joblib import dump, load
 #You don't need to enter your key/secret in order to get data from the exchange, its only needed for trades in the TradingBot.py class.
 api_key = '0'
 api_secret = '0'
+currency = 'BTCUSDT'
 client = Client(api_key, api_secret)
 
 interval_list = [
@@ -44,7 +45,7 @@ interval_list = [
 
 interval_mapping = {item[0]: item[1] for item in interval_list}
 
-def get_data(interval, start_date, end_date):
+def get_historical_data(interval, start_date, end_date):
     file_name = f"btc_usdt_{interval_mapping[interval]}.csv"
     file_path = os.path.join("Data", file_name)
     target_file_path = file_path.replace(".csv", "_targets.csv")
@@ -54,7 +55,7 @@ def get_data(interval, start_date, end_date):
         y = pd.read_csv(target_file_path)['target'].tolist()
     else:
         # Fetch historical data
-        candles = client.get_historical_klines("BTCUSDT", interval_mapping[interval], start_date, end_date)
+        candles = client.get_historical_klines(currency, interval_mapping[interval], start_date, end_date)
 
         # Convert the raw data from the exchange into a friendlier form with some basic feature creation
         x = cf.FeatureCreation(candles)
@@ -64,9 +65,9 @@ def get_data(interval, start_date, end_date):
         
         #remove the top elements of the features and targets - this is for certain features that arent compatible with the top most
         #for example SMA27 would have 27 entries that would be incompatible/incomplete and would need to be discarded        y = y[94:]
-        x = x[94:len(candles)-1]
-        y = y[94:]
-        
+        #x = x[94:len(candles)-1]
+        #y = y[94:]
+
         # Save the feature dataframe and target list to CSV
         x.to_csv(file_path, index=False)
         pd.DataFrame(y, columns=['target']).to_csv(target_file_path, index=False)
@@ -74,7 +75,28 @@ def get_data(interval, start_date, end_date):
     return x, np.array(y)
 
 
-
+# Function to fetch latest kline data and convert to feature DataFrame
+def get_latest_data(interval, limit=1000):
+    """
+    Fetch recent kline data and convert it to a feature DataFrame.
+    
+    Parameters:
+    - symbol (str): The trading pair symbol, e.g., 'BTCUSDT'.
+    - interval (str): The time interval for each candlestick/kline, e.g., '1h'.
+    - limit (int): The maximum number of data points to retrieve (default: 100).
+    """
+    params = {
+        'symbol': currency,
+        'interval': interval_mapping[interval],
+        'limit': limit
+    }
+    
+    candles = client.get_klines(**params)
+    
+    # Convert the raw data into a friendlier form with some basic feature creation
+    feature_data = cf.FeatureCreation(candles)
+    
+    return feature_data
 
 
 
