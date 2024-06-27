@@ -61,11 +61,12 @@ def get_data(interval, start_date, end_date):
 
         # Create our targets
         y = cf.CreateTargets(candles, 1)
-
+        
         #remove the top elements of the features and targets - this is for certain features that arent compatible with the top most
         #for example SMA27 would have 27 entries that would be incompatible/incomplete and would need to be discarded        y = y[94:]
         x = x[94:len(candles)-1]
-
+        y = y[94:]
+        
         # Save the feature dataframe and target list to CSV
         x.to_csv(file_path, index=False)
         pd.DataFrame(y, columns=['target']).to_csv(target_file_path, index=False)
