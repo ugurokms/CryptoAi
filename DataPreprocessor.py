@@ -76,7 +76,7 @@ def get_historical_data(interval, start_date, end_date):
 
 
 # Function to fetch latest kline data and convert to feature DataFrame
-def get_latest_data(interval, limit=1000):
+def get_latest_data(interval, limit=1):
     """
     Fetch recent kline data and convert it to a feature DataFrame.
     
@@ -97,75 +97,3 @@ def get_latest_data(interval, limit=1000):
     feature_data = cf.FeatureCreation(candles)
     
     return feature_data
-
-
-
-
-#produce sets, avoiding overlaps!
-#data is seporated temporily rather than randomly
-#this prevents the model learning stuff it wouldnt know - aka leakage - which can give us false positive models
-#trny = y[:9999]
-#trnx = x[:9999]
-
-#Validation set is not used in this starter model, but should be used if using other libraries that support early stopping.
-#valy = y[10000:12999]
-#valx = x[10000:12999]
-
-#tsty = y[13000:]
-#tstx = x[13000:]
-
-#model = GradientBoostingClassifier() 
-#model.fit(trnx,trny)
-#
-#preds = model.predict(tstx)
-#
-##Some basic tests so we know how well our model performs on unseen - "modern" data.
-##Helps with fine tuning features and model parameters
-#accuracy = accuracy_score(tsty, preds)
-#mse = mean_squared_error(tsty, preds)
-#
-#print("Accuracy = " + str(accuracy))
-#print("MSE = " + str(mse))
-#
-#falsePos = 0
-#falseNeg = 0
-#truePos = 0
-#trueNeg = 0
-#total = len(preds)
-#
-#for i in range(len(preds)):
-#    
-#    if preds[i] == tsty[i] and tsty[i] == 1:
-#        truePos +=1
-#        
-#    elif preds[i] == tsty[i] and tsty[i] == 0:
-#        trueNeg +=1
-#        
-#    elif preds[i] != tsty[i] and tsty[i] == 1:
-#        falsePos +=1
-#        
-#    elif preds[i] != tsty[i] and tsty[i] == 0:
-#        falseNeg +=1
-#        
-#print("False Pos = " + str(falsePos/total))
-#print("False Neg = " + str(falseNeg/total))
-#print("True Pos = " + str(truePos/total))
-#print("True Neg = " + str(trueNeg/total))
-#
-##how important of the features - helps with feature selection and creation!
-#results = pd.DataFrame()
-#results['names'] = trnx.columns
-#results['importance'] = model.feature_importances_
-#print(results.head)
-#
-#
-##save our model to the system for use in the bot
-#dump(model, open("Models/model.mdl", 'wb'))
-
-
-
-
-
-
-
-

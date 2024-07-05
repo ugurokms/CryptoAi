@@ -38,7 +38,7 @@ def create_dataframe(klines):
         'low': True,
         'close': True,
         'volume': True,
-        'close_time': True,
+        'close_time': False,
         'quote_asset_volume': True,
         'number_of_trades': True,
         'taker_buy_base_asset_volume': True,
@@ -82,15 +82,20 @@ def FeatureCreation(klines):
     convertedData['bb_low_indicator'] = ta.volatility.bollinger_lband_indicator(convertedData['close'])
     convertedData['atr'] = ta.volatility.average_true_range(convertedData['high'], convertedData['low'], convertedData['close'], window=14)
 
-    convertedData['ema12'] = ta.trend.ema_indicator(convertedData['close'], window=12)
-    convertedData['ema26'] = ta.trend.ema_indicator(convertedData['close'], window=26)
-    convertedData['sma27'] = ta.trend.sma_indicator(convertedData['close'], window=27)
-    convertedData['sma200'] = ta.trend.sma_indicator(convertedData['close'], window=200)
+    convertedData['ema24'] = ta.trend.ema_indicator(convertedData['close'], window=24)
+    convertedData['ema168'] = ta.trend.ema_indicator(convertedData['close'], window=268)
+    convertedData['ema672'] = ta.trend.ema_indicator(convertedData['close'], window=672)
+    convertedData['ema8766'] = ta.trend.ema_indicator(convertedData['close'], window=8766)
+
+    convertedData['sma24'] = ta.trend.sma_indicator(convertedData['close'], window=24)
+    convertedData['sma168'] = ta.trend.sma_indicator(convertedData['close'], window=268)
+    convertedData['sma672'] = ta.trend.sma_indicator(convertedData['close'], window=672)
+    convertedData['sma8766'] = ta.trend.sma_indicator(convertedData['close'], window=8766)
 
     # Remove the first 200 rows to account for the highest window size (SMA200)
     
     initial_length = len(convertedData)
-    convertedData = convertedData.iloc[200:]
+    convertedData = convertedData.iloc[8766:]
     rows_dropped = initial_length - len(convertedData)
     
     return convertedData[:-1]
