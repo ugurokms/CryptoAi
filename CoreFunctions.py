@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import ta
 
+rows_dropped = 0
 
 #Get the balance of a specified coin
 def getCoinBalance(client, currency):
@@ -37,7 +38,7 @@ def create_dataframe(klines):
         'low': True,
         'close': True,
         'volume': True,
-        'close_time': True,
+        'close_time': False,
         'quote_asset_volume': True,
         'number_of_trades': True,
         'taker_buy_base_asset_volume': True,
@@ -65,6 +66,7 @@ def create_dataframe(klines):
     return df
 
 def FeatureCreation(klines):
+    global rows_dropped
     # Convert raw data to a DataFrame
     convertedData = create_dataframe(klines)
     
@@ -78,16 +80,34 @@ def FeatureCreation(klines):
     convertedData['bb_mid'] = ta.volatility.bollinger_mavg(convertedData['close'])
     convertedData['bb_high_indicator'] = ta.volatility.bollinger_hband_indicator(convertedData['close'])
     convertedData['bb_low_indicator'] = ta.volatility.bollinger_lband_indicator(convertedData['close'])
+    convertedData['atr'] = ta.volatility.average_true_range(convertedData['high'], convertedData['low'], convertedData['close'], window=14)
+
+#    convertedData['ema24'] = ta.trend.ema_indicator(convertedData['close'], window=24)
+#    convertedData['ema168'] = ta.trend.ema_indicator(convertedData['close'], window=268)
+#    convertedData['ema672'] = ta.trend.ema_indicator(convertedData['close'], window=672)
+#    convertedData['ema8766'] = ta.trend.ema_indicator(convertedData['close'], window=8766)
+
+#    convertedData['sma24'] = ta.trend.sma_indicator(convertedData['close'], window=24)
+#    convertedData['sma168'] = ta.trend.sma_indicator(convertedData['close'], window=268)
+#    convertedData['sma672'] = ta.trend.sma_indicator(convertedData['close'], window=672)
+#    convertedData['sma8766'] = ta.trend.sma_indicator(convertedData['close'], window=8766)
+
+    # Remove the first 200 rows to account for the highest window size (SMA200)
     
-    return convertedData
+    initial_length = len(convertedData)
+    convertedData = convertedData.iloc[50:]
+    rows_dropped = initial_length - len(convertedData)
+    
+    return convertedData[:-1]
 
 
 #Create targets for our machine learning model. This is done by predicting if the closing price of the next candle will 
 #be higher or lower than the current one.
 def CreateTargets(data, offset):
+    global rows_dropped
     y = []
     
-    for i in range(0, len(data)-offset):
+    for i in range(rows_dropped, len(data)-offset):
         current = float(data[i][3])
         comparison = float(data[i+offset][3])
         
@@ -97,7 +117,23 @@ def CreateTargets(data, offset):
         elif current>=comparison:
             y.append(0)
             
+    #y = y[rows_dropped:]
     return y
+
+def add_symbol_close_to_dataframe(client, symbol, dataframe, interval, start_date, end_date):
+    # Fetch historical data for the given symbol
+    klines = client.get_historical_klines(symbol, interval, start_date, end_date)
+    
+    # Convert the raw data from the exchange into a friendlier form
+    symbol_data = FeatureCreation(klines)
+    
+    # Ensure the timestamps match before merging
+    if dataframe['timestamp'].equals(symbol_data['timestamp']):
+        dataframe[symbol] = symbol_data['close']
+    else:
+        raise ValueError("Timestamps do not match between the dataframes.")
+    
+    return dataframe
 
 #FEATURE EXAMPLES
 #Calculate the change in the values of a column
