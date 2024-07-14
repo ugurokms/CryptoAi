@@ -9,9 +9,11 @@ import numpy as np
 from numpy import *
 import pandas as pd
 import os
+from datetime import datetime
 
 from binance.client import Client
 from binance.enums import *
+import yfinance as yf
 
 import CoreFunctions as cf
 
@@ -45,7 +47,14 @@ interval_list = [
 
 interval_mapping = {item[0]: item[1] for item in interval_list}
 
+def convert_date_format(date_str):
+    try:
+        return datetime.strptime(date_str, "%d %b, %Y").strftime("%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"Incorrect date format for {date_str}. Expected 'DD MMM, YYYY'.")
+
 def get_historical_data(interval, start_date, end_date):
+
     file_name = f"btc_usdt_{interval_mapping[interval]}.csv"
     file_path = os.path.join("Data", file_name)
     target_file_path = file_path.replace(".csv", "_targets.csv")
@@ -56,17 +65,14 @@ def get_historical_data(interval, start_date, end_date):
     else:
         # Fetch historical data
         candles = client.get_historical_klines(currency, interval_mapping[interval], start_date, end_date)
-
+        gold_klines = client.get_historical_klines('PAXGUSDT', interval_mapping[interval], start_date, end_date)
+        
         # Convert the raw data from the exchange into a friendlier form with some basic feature creation
         x = cf.FeatureCreation(candles)
 
+        #cf.add_symbol_close_to_dataframe(client,'PAXGUSDT', x, interval_mapping[interval], start_date, end_date)
         # Create our targets
         y = cf.CreateTargets(candles, 1)
-        
-        #remove the top elements of the features and targets - this is for certain features that arent compatible with the top most
-        #for example SMA27 would have 27 entries that would be incompatible/incomplete and would need to be discarded        y = y[94:]
-        #x = x[94:len(candles)-1]
-        #y = y[94:]
 
         # Save the feature dataframe and target list to CSV
         x.to_csv(file_path, index=False)
