@@ -82,20 +82,20 @@ def FeatureCreation(klines):
     convertedData['bb_low_indicator'] = ta.volatility.bollinger_lband_indicator(convertedData['close'])
     convertedData['atr'] = ta.volatility.average_true_range(convertedData['high'], convertedData['low'], convertedData['close'], window=14)
 
-#    convertedData['ema24'] = ta.trend.ema_indicator(convertedData['close'], window=24)
-#    convertedData['ema168'] = ta.trend.ema_indicator(convertedData['close'], window=268)
-#    convertedData['ema672'] = ta.trend.ema_indicator(convertedData['close'], window=672)
+    convertedData['ema24'] = ta.trend.ema_indicator(convertedData['close'], window=24)
+    convertedData['ema168'] = ta.trend.ema_indicator(convertedData['close'], window=268)
+    convertedData['ema672'] = ta.trend.ema_indicator(convertedData['close'], window=672)
 #    convertedData['ema8766'] = ta.trend.ema_indicator(convertedData['close'], window=8766)
 
-#    convertedData['sma24'] = ta.trend.sma_indicator(convertedData['close'], window=24)
-#    convertedData['sma168'] = ta.trend.sma_indicator(convertedData['close'], window=268)
-#    convertedData['sma672'] = ta.trend.sma_indicator(convertedData['close'], window=672)
+    convertedData['sma24'] = ta.trend.sma_indicator(convertedData['close'], window=24)
+    convertedData['sma168'] = ta.trend.sma_indicator(convertedData['close'], window=268)
+    convertedData['sma672'] = ta.trend.sma_indicator(convertedData['close'], window=672)
 #    convertedData['sma8766'] = ta.trend.sma_indicator(convertedData['close'], window=8766)
 
     # Remove the first 200 rows to account for the highest window size (SMA200)
     
     initial_length = len(convertedData)
-    convertedData = convertedData.iloc[50:]
+    convertedData = convertedData.iloc[672:]
     rows_dropped = initial_length - len(convertedData)
     
     return convertedData[:-1]
@@ -103,13 +103,13 @@ def FeatureCreation(klines):
 
 #Create targets for our machine learning model. This is done by predicting if the closing price of the next candle will 
 #be higher or lower than the current one.
-def CreateTargets(data, offset):
+def CreateTargetsold(data, offset):
     global rows_dropped
     y = []
     
     for i in range(rows_dropped, len(data)-offset):
-        current = float(data[i][3])
-        comparison = float(data[i+offset][3])
+        current = float(data[i][4])
+        comparison = float(data[i+offset][4])
         
         if current<comparison:
             y.append(1)
@@ -117,8 +117,11 @@ def CreateTargets(data, offset):
         elif current>=comparison:
             y.append(0)
             
-    #y = y[rows_dropped:]
     return y
+
+def CreateTargets(df, offset):
+    target = (df['close'].shift(-offset) > df['close']).astype(int).iloc[:-offset]
+    return target.to_numpy()
 
 def add_symbol_close_to_dataframe(client, symbol, dataframe, interval, start_date, end_date):
     # Fetch historical data for the given symbol
@@ -128,6 +131,9 @@ def add_symbol_close_to_dataframe(client, symbol, dataframe, interval, start_dat
     symbol_data = FeatureCreation(klines)
     
     # Ensure the timestamps match before merging
+    print(dataframe['timestamp'])
+    print(symbol_data['timestamp'])
+
     if dataframe['timestamp'].equals(symbol_data['timestamp']):
         dataframe[symbol] = symbol_data['close']
     else:

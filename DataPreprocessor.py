@@ -65,14 +65,16 @@ def get_historical_data(interval, start_date, end_date):
     else:
         # Fetch historical data
         candles = client.get_historical_klines(currency, interval_mapping[interval], start_date, end_date)
-        gold_klines = client.get_historical_klines('PAXGUSDT', interval_mapping[interval], start_date, end_date)
         
         # Convert the raw data from the exchange into a friendlier form with some basic feature creation
         x = cf.FeatureCreation(candles)
 
         #cf.add_symbol_close_to_dataframe(client,'PAXGUSDT', x, interval_mapping[interval], start_date, end_date)
         # Create our targets
-        y = cf.CreateTargets(candles, 1)
+        offset = 1
+        y = cf.CreateTargets(x, offset)
+        x = x.iloc[:-offset]
+
 
         # Save the feature dataframe and target list to CSV
         x.to_csv(file_path, index=False)
