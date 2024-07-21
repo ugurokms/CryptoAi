@@ -24,7 +24,6 @@ from joblib import dump, load
 #You don't need to enter your key/secret in order to get data from the exchange, its only needed for trades in the TradingBot.py class.
 api_key = '0'
 api_secret = '0'
-currency = 'BTCUSDT'
 client = Client(api_key, api_secret)
 
 interval_list = [
@@ -53,9 +52,32 @@ def convert_date_format(date_str):
     except ValueError:
         raise ValueError(f"Incorrect date format for {date_str}. Expected 'DD MMM, YYYY'.")
 
-def get_historical_data(interval, start_date, end_date):
+def get_close_price(currency, interval, start_date, end_date):
+    file_name = f"{currency}_close_{interval_mapping[interval]}.csv"
+    file_path = os.path.join("Data", file_name)
 
-    file_name = f"btc_usdt_{interval_mapping[interval]}.csv"
+    if os.path.exists(file_path):
+        x = pd.read_csv(file_path)['close'].tolist()  # Veriyi yüklerken sadece kapanış fiyatlarını liste olarak al
+    else:
+        # Fetch historical data
+        candles = client.get_historical_klines(currency, interval_mapping[interval], start_date, end_date)
+        print(candles)
+        
+        # get close prices
+        close_prices = [float(candle[4]) for candle in candles]
+
+        # Kapanış fiyatlarını bir DataFrame'e dönüştür
+        df = pd.DataFrame(close_prices, columns=['close'])
+
+        # Save the DataFrame to CSV
+        df.to_csv(file_path, index=False)
+        x = close_prices
+
+    return x
+
+def get_historical_data(currency, interval, start_date, end_date):
+
+    file_name = f"{currency}_{interval_mapping[interval]}.csv"
     file_path = os.path.join("Data", file_name)
     target_file_path = file_path.replace(".csv", "_targets.csv")
 

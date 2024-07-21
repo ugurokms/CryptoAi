@@ -32,17 +32,17 @@ def executeSell(client, market, qtySell):
 
 def create_dataframe(klines):
     columns = {
-        'timestamp': True,
+        'timestamp': False,
         'open': True,
         'high': True,
         'low': True,
         'close': True,
-        'volume': True,
+        'volume': False,
         'close_time': False,
-        'quote_asset_volume': True,
-        'number_of_trades': True,
-        'taker_buy_base_asset_volume': True,
-        'taker_buy_quote_asset_volume': True,
+        'quote_asset_volume': False,
+        'number_of_trades': False,
+        'taker_buy_base_asset_volume': False,
+        'taker_buy_quote_asset_volume': False,
         'ignore': False
     }
     
@@ -71,25 +71,37 @@ def FeatureCreation(klines):
     convertedData = create_dataframe(klines)
     
     # Add technical indicators directly to the convertedData DataFrame
-    convertedData['rsi'] = ta.momentum.rsi(convertedData['close'], window=14)
+
+    # aşırı alım-satım göstergesi
+    convertedData['rsi_10'] = ta.momentum.rsi(convertedData['close'], window=10)
+    convertedData['rsi_20'] = ta.momentum.rsi(convertedData['close'], window=20)
+    convertedData['rsi_30'] = ta.momentum.rsi(convertedData['close'], window=30)
+
+    # Moving Average Convergence Divergence
     convertedData['macd'] = ta.trend.macd(convertedData['close'])
     convertedData['macd_signal'] = ta.trend.macd_signal(convertedData['close'])
     convertedData['macd_diff'] = ta.trend.macd_diff(convertedData['close'])
+
+    #Bollinger Bands, fiyatların volatilitesini ölçmek için kullanılır
     convertedData['bb_high'] = ta.volatility.bollinger_hband(convertedData['close'])
     convertedData['bb_low'] = ta.volatility.bollinger_lband(convertedData['close'])
     convertedData['bb_mid'] = ta.volatility.bollinger_mavg(convertedData['close'])
     convertedData['bb_high_indicator'] = ta.volatility.bollinger_hband_indicator(convertedData['close'])
     convertedData['bb_low_indicator'] = ta.volatility.bollinger_lband_indicator(convertedData['close'])
+
+    # varlığın volatilitesini ölçer
     convertedData['atr'] = ta.volatility.average_true_range(convertedData['high'], convertedData['low'], convertedData['close'], window=14)
 
-    convertedData['ema24'] = ta.trend.ema_indicator(convertedData['close'], window=24)
-    convertedData['ema168'] = ta.trend.ema_indicator(convertedData['close'], window=268)
-    convertedData['ema672'] = ta.trend.ema_indicator(convertedData['close'], window=672)
+    # exponential moving Average
+    #convertedData['ema24'] = ta.trend.ema_indicator(convertedData['close'], window=24)
+    #convertedData['ema168'] = ta.trend.ema_indicator(convertedData['close'], window=268)
+    #convertedData['ema672'] = ta.trend.ema_indicator(convertedData['close'], window=672)
 #    convertedData['ema8766'] = ta.trend.ema_indicator(convertedData['close'], window=8766)
 
-    convertedData['sma24'] = ta.trend.sma_indicator(convertedData['close'], window=24)
-    convertedData['sma168'] = ta.trend.sma_indicator(convertedData['close'], window=268)
-    convertedData['sma672'] = ta.trend.sma_indicator(convertedData['close'], window=672)
+    # simple moving Average
+    #convertedData['sma24'] = ta.trend.sma_indicator(convertedData['close'], window=24)
+    #convertedData['sma168'] = ta.trend.sma_indicator(convertedData['close'], window=268)
+    #convertedData['sma672'] = ta.trend.sma_indicator(convertedData['close'], window=672)
 #    convertedData['sma8766'] = ta.trend.sma_indicator(convertedData['close'], window=8766)
 
     # Remove the first 200 rows to account for the highest window size (SMA200)
